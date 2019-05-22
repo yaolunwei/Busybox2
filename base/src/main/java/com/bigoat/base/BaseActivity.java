@@ -17,6 +17,7 @@ import android.support.v7.app.AppCompatActivity;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -55,7 +56,7 @@ public abstract class BaseActivity<Binding extends ViewDataBinding, ViewMode ext
      * @param bind Binding
      * @param vm ViewMode
      */
-    protected abstract void myCreate(@NonNull Binding bind, @Nullable ViewMode vm);
+    protected abstract void myCreate(@NonNull Binding bind, @NonNull ViewMode vm);
 
     /**
      * 创建ViewMode
@@ -63,12 +64,23 @@ public abstract class BaseActivity<Binding extends ViewDataBinding, ViewMode ext
      * @return ViewMode
      */
     private ViewMode createViewModel() {
-        try {
-            ParameterizedType type = (ParameterizedType) this.getClass().getGenericSuperclass();
-            Class clazz = (Class<ViewMode>) type.getActualTypeArguments()[1];
-            return  (ViewMode) ViewModelProviders.of(this).get(clazz);
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+        Type type = getClass().getGenericSuperclass();
+
+        if (type instanceof ParameterizedType) {
+            ParameterizedType paraType = (ParameterizedType) type;
+
+            if (paraType.getActualTypeArguments().length == 2) {
+                Class clazz = (Class<ViewMode>) paraType.getActualTypeArguments()[1];
+                return (ViewMode) ViewModelProviders.of(this).get(clazz);
+            } else {
+                throw new RuntimeException("请配置正确的泛型参数, eg: MyActivity extends BaseActivity<?, ?>");
+            }
+
+        } else {
+
+            BaseViewModel baseViewModel = ViewModelProviders.of(this).get(BaseViewModel.class);
+
+            return (ViewMode)baseViewModel;
         }
     }
 
@@ -78,11 +90,12 @@ public abstract class BaseActivity<Binding extends ViewDataBinding, ViewMode ext
         tag = getClass().getSimpleName();
         mFragmentManager = getSupportFragmentManager();
 
+        bind = DataBindingUtil.setContentView(this, myView());
+
         vm = createViewModel();
 
         injectBundle(getIntent().getExtras());
 
-        bind = DataBindingUtil.setContentView(this, myView());
 
         vm.toastData.observe(this, new Observer<Integer>() {
             @Override

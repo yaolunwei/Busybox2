@@ -23,10 +23,6 @@ public class BaseViewModel extends ViewModel implements Base {
     BaseLiveData<Boolean> progressData = new BaseLiveData<>();
     String progressMsg;
 
-    protected BaseViewModel() {
-        tag = getClass().getSimpleName();
-    }
-
 
     @Override
     public void log(int type, @NonNull String tag,  @Nullable Object... contents) {
